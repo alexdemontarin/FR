@@ -3,10 +3,14 @@ package org.usfirst.frc.team5293.robot;
 import edu.wpi.first.wpilibj.SampleRobot;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.SpeedController;
+import edu.wpi.first.wpilibj.Talon;
 import edu.wpi.first.wpilibj.RobotDrive;
+import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.buttons.JoystickButton;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * This is a demo program showing the use of the RobotDrive class, specifically
@@ -24,30 +28,256 @@ import edu.wpi.first.wpilibj.buttons.JoystickButton;
  * instead if you're new.
  */
 public class Robot extends SampleRobot {
-	RobotDrive myRobot = new RobotDrive(0, 1, 2, 3); // class that handles basic drive
+	SpeedController frontLeft = new Talon(0);
+	SpeedController backLeft = new Talon(1);
+	SpeedController frontRight = new Talon(2);
+	SpeedController backRight = new Talon(3);
+	
+	RobotDrive myRobot = new RobotDrive(frontLeft, backLeft, frontRight, backRight); // class that handles basic drive
 												// operations
+	
 	SpeedController shooter = new Spark(4);
-	Joystick leftStick = new Joystick(0); // set to ID 1 in DriverStation
-	Joystick rightStick = new Joystick(1); // set to ID 2 in DriverStation
+	Joystick leftStick = new Joystick(0); // set to ID 0 in DriverStation
+	Joystick rightStick = new Joystick(1); // set to ID 1 in DriverStation
 	JoystickButton trigger = new JoystickButton(leftStick, 1);
+	
+	//Autonomous Stuff
+	final String defaultAuto = "Default Do Nothing";
+	final String shootAuto = "Shoot for 10 Seconds";
+	final String turnAutoLeftBumper = "Turn Off the Wall When in Contact With Left";
+	final String turnAutoRightBumper = "Turn Off the Wall When in Contact With Right";
+	final String turnAndDriveLeftBumperAuto = "Turn Off the Wall and Drive When in Contact With Left";
+	final String turnAndDriveRightBumperAuto = "Turn Off the Wall and Drive When in Contact With Right";
+	final String shootTurnDriveLeftBumperAuto = "Shoot Balls, Turn, Drive Forward When in Contact With Left";
+	final String shootTurnDriveRightBumperAuto = "Shoot Balls, Turn, Drive Forward When in Contact With Right";
+	SendableChooser<String> chooser = new SendableChooser<>();
 
 	public Robot() {
 		myRobot.setExpiration(0.1);
 	}
+	
+	@Override
+	public void robotInit() {
+		//Add all options for autonomous in SmartDashboard
+		chooser.addDefault("Drive at Half Speed for 5 Seconds", defaultAuto);
+		chooser.addObject("Shoot Balls for 10 Seconds", shootAuto);
+		chooser.addObject("Turns Off the Wall When in Contact With Right", turnAutoRightBumper);
+		chooser.addObject("Turns Off the Wall When in Contact With Left", turnAutoLeftBumper);
+		chooser.addObject("Turns Off the Wall and Drives Forward - Contact Left", turnAndDriveLeftBumperAuto);
+		chooser.addObject("Turns Off the Wall and Drives Forward - Contact Right", turnAndDriveRightBumperAuto);
+		chooser.addObject("Shoot Balls, Turn, Drive Forward - Contact Left", shootTurnDriveLeftBumperAuto);
+		chooser.addObject("Shoot Balls, Turn, Drive Forward - Contact Right", shootTurnDriveRightBumperAuto);
+		SmartDashboard.putData("Auto modes", chooser);
+		
+		//Camera Stuff
+		CameraServer.getInstance().startAutomaticCapture();
+	}
 
-	/**
-	 * Runs the motors with tank steering.
-	 */
+	
+
 	@Override
 	public void operatorControl() {
 		myRobot.setSafetyEnabled(true);
 		while (isOperatorControl() && isEnabled()) {
-			myRobot.tankDrive(leftStick, rightStick);
+			//Adds dead zone and inversion to turning on second stick
+			if(rightStick.getZ() > .1 || rightStick.getZ() < .1){
+				 myRobot.setInvertedMotor(RobotDrive.MotorType.kFrontLeft, true);
+				 myRobot.setInvertedMotor(RobotDrive.MotorType.kFrontRight, true);
+				 myRobot.setInvertedMotor(RobotDrive.MotorType.kRearLeft, true);
+				 myRobot.setInvertedMotor(RobotDrive.MotorType.kRearRight, true);
+			}else{
+				 myRobot.setInvertedMotor(RobotDrive.MotorType.kFrontLeft, false);
+				 myRobot.setInvertedMotor(RobotDrive.MotorType.kFrontRight, false);
+				 myRobot.setInvertedMotor(RobotDrive.MotorType.kRearLeft, false);
+				 myRobot.setInvertedMotor(RobotDrive.MotorType.kRearRight, false);
+			}
+			myRobot.arcadeDrive(leftStick, 1, rightStick, 2);
 			if(trigger.get())
-				shooter.set(.8);
+				shooter.set(.82);
 			else
 				shooter.set(0);
 			Timer.delay(0.005); // wait for a motor update time
+		}
+	}
+	
+	//??Need to add two different turn functions for different alliances??
+	
+
+	@Override
+	public void autonomous() {
+		String autoSelected = chooser.getSelected();
+		// String autoSelected = SmartDashboard.getString("Auto Selector",
+		// defaultAuto);
+		System.out.println("Auto selected: " + autoSelected);
+
+		switch (autoSelected) {
+		case shootAuto:
+			myRobot.setSafetyEnabled(false);
+			//myRobot.drive(-0.5, 1.0); // spin at half speed
+			//Timer.delay(2.0); // for 2 seconds
+			myRobot.drive(0.0, 0.0); // stop robot
+			shooter.set(.9);
+			Timer.delay(10.5);
+			shooter.set(0);
+			break;
+		case turnAutoLeftBumper:
+			myRobot.setSafetyEnabled(false);
+			frontLeft.set(.7);
+			backLeft.set(.7);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			Timer.delay(1.0);
+			
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(0);
+			backRight.set(0);
+			break;
+		case turnAutoRightBumper:
+			myRobot.setSafetyEnabled(false);
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(.7);
+			backRight.set(.7);
+			
+			Timer.delay(1.0);
+			
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			break;
+		case turnAndDriveRightBumperAuto:
+			myRobot.setSafetyEnabled(false);
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(.7);
+			backRight.set(.7);
+			
+			Timer.delay(1);
+			
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			frontLeft.set(-.5);
+			backLeft.set(-.5);
+			frontRight.set(.5);
+			backRight.set(.5);
+			
+			Timer.delay(2);
+			
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(0);
+			backRight.set(0);
+			break;
+			
+		case turnAndDriveLeftBumperAuto:
+			myRobot.setSafetyEnabled(false);
+			frontLeft.set(.7);
+			backLeft.set(.7);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			Timer.delay(1);
+			
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			frontLeft.set(.5);
+			backLeft.set(.5);
+			frontRight.set(-.5);
+			backRight.set(-.5);
+			
+			Timer.delay(2);
+			
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			break;
+		
+			
+		//INVERT THESE FOR RED SIDE
+		case shootTurnDriveLeftBumperAuto:
+			myRobot.setSafetyEnabled(false);
+			myRobot.drive(0.0, 0.0);
+			shooter.set(.9);
+			Timer.delay(10);
+			shooter.set(0);
+			
+			frontLeft.set(.7);
+			backLeft.set(.7);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			Timer.delay(1);
+			
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			frontLeft.set(.5);
+			backLeft.set(.5);
+			frontRight.set(-.5);
+			backRight.set(-.5);
+			
+			Timer.delay(2);
+			
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			break;
+			
+		case shootTurnDriveRightBumperAuto:
+			myRobot.setSafetyEnabled(false);
+			myRobot.drive(0.0, 0.0);
+			shooter.set(.9);
+			Timer.delay(10);
+			shooter.set(0);
+			
+			frontLeft.set(.7);
+			backLeft.set(.7);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			Timer.delay(1);
+			
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			frontLeft.set(.5);
+			backLeft.set(.5);
+			frontRight.set(-.5);
+			backRight.set(-.5);
+			
+			Timer.delay(2);
+			
+			frontLeft.set(0);
+			backLeft.set(0);
+			frontRight.set(0);
+			backRight.set(0);
+			
+			break;
+			
+		default:
+			myRobot.setSafetyEnabled(false);
+			myRobot.drive(0.5, 0.0); // drive forwards half speed
+			Timer.delay(5.0); // for 5 seconds
+			myRobot.drive(0.0, 0.0); // stop robot
+			break;
 		}
 	}
 }
