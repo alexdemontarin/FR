@@ -28,15 +28,18 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * instead if you're new.
  */
 public class Robot extends SampleRobot {
-	SpeedController frontLeft = new Talon(0);
-	SpeedController backLeft = new Talon(1);
-	SpeedController frontRight = new Talon(2);
-	SpeedController backRight = new Talon(3);
+	SpeedController frontLeft = new Talon(0);//Front Left
+	SpeedController backLeft = new Talon(1);//Back Left
+	SpeedController frontRight = new Talon(2);//Front Right
+	SpeedController backRight = new Talon(3);//Back Right
+	
+	SpeedController shooter = new Spark(4); //For Shooter
+	
+	SpeedController winch = new Spark(5); //For Winch
 	
 	RobotDrive myRobot = new RobotDrive(frontLeft, backLeft, frontRight, backRight); // class that handles basic drive
 												// operations
 	
-	SpeedController shooter = new Spark(4);
 	Joystick leftStick = new Joystick(0); // set to ID 0 in DriverStation
 	Joystick rightStick = new Joystick(1); // set to ID 1 in DriverStation
 	JoystickButton trigger = new JoystickButton(leftStick, 1);
@@ -80,7 +83,7 @@ public class Robot extends SampleRobot {
 		myRobot.setSafetyEnabled(true);
 		while (isOperatorControl() && isEnabled()) {
 			//Adds dead zone and inversion to turning on second stick
-			if(rightStick.getZ() > .1 || rightStick.getZ() < .1){
+			if(rightStick.getZ() > -.1 || rightStick.getZ() < .1){ //HOW DOES THIS NOT BREAK //??Does this break it if I set the first one ??
 				 myRobot.setInvertedMotor(RobotDrive.MotorType.kFrontLeft, true);
 				 myRobot.setInvertedMotor(RobotDrive.MotorType.kFrontRight, true);
 				 myRobot.setInvertedMotor(RobotDrive.MotorType.kRearLeft, true);
@@ -92,10 +95,36 @@ public class Robot extends SampleRobot {
 				 myRobot.setInvertedMotor(RobotDrive.MotorType.kRearRight, false);
 			}
 			myRobot.arcadeDrive(leftStick, 1, rightStick, 2);
+			
+			//TODO: Add toggle button to make driving non-linear
+			
 			if(trigger.get())
 				shooter.set(.82);
 			else
 				shooter.set(0);
+			
+			//TODO: Add deadzone to winch 
+			//TODO: Add inversion if necessary
+			//TODO: Add a non-linear curve via equation of (1/X , X = Y-Output ) or x^3 
+				//-Change exponent to change severity of curve
+			
+			//Makes winch move based on 
+			//if(rightStick.getY() != 0){
+				//winch.set(rightStick.getY());
+			//}
+			
+			/**
+			 *CURVE BASED ON: https://www.wolframalpha.com/input/?i=Plot%5BPiecewise%5B%7B%7Bx%5E5,+x+%3C+0%7D,+%7Bx%5E3,+x+%3E+0%7D%7D%5D,+%7Bx,+-1,+1%7D%5D
+			 *	or: Plot[Piecewise[{{x^5, x < 0}, {x^3, x > 0}}], {x, -1, 1}]
+			 *	or: x^3 , [0, 1] ; x^5 [-1, 0)
+			 * 
+			 * if(rightStick.getY() >= 0){
+			 * 		winch.set(Math.pow(rightStick.getY(), 3));
+			 * }else{
+			 * 		winch.set(Math.pow(rightStick.getY(), 5));
+			 * }
+			 */
+			
 			Timer.delay(0.005); // wait for a motor update time
 		}
 	}
